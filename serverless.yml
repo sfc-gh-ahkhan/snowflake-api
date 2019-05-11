@@ -1,0 +1,219 @@
+service:
+  name: snowflake-api-test-2
+
+# The following is commented out because a lambda layer has already 
+# been uploaded to allow lab participants to deploy this API quickly
+# If you want to deploy this to your own AWS account, please uncomment and
+# follow the process of packaging all requirements
+# here: https://serverless.com/blog/serverless-python-packaging/
+# -------------------------------------------------------------------------
+#plugins:
+#  - serverless-python-requirements
+
+#custom:
+#  pythonRequirements:
+#    dockerizePip: non-linux
+# -------------------------------------------------------------------------
+
+custom:
+  aws_account: 486416218566
+
+provider:
+  name: aws
+  runtime: python3.7
+  stackName: ${self:service}-${self:provider.stage}
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  profile: personal
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - "execute-api:ManageConnections"
+      Resource:
+        - "arn:aws:execute-api:*:*:**/@connections/*"
+    - Effect: Allow
+      Action:
+        - "states:StartExecution"
+      Resource:
+        - "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
+  environment:
+    API_REGION: "${self:provider.region}"
+    ##################################################################################
+    ### Credentials should never be kept in code. Please use AWS Secrets Manager  ####
+    ### or some other similar service to keep these secure.                       ####
+    ##################################################################################
+    SNOWFLAKE_USER: "snowflake_api"
+    SNOWFLAKE_PASSWORD: "Snowfl*ke450"
+    ##################################################################################
+    SNOWFLAKE_ACCOUNT: "demo102"
+    SNOWFLAKE_WAREHOUSE: "TEST_WH"
+    SNOWFLAKE_SCHEMA: "citibike.public"
+    SNOWFLAKE_STATE_MACHINE_ARN: "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
+
+  # optional
+  websocketApiName: snowflake-websocket-api-${self:provider.stage}
+
+  # required for websocket apis
+  # this selects from your payload what your "routeKey" parameter is
+  # from the websocket event types on your function
+  websocketApiRouteSelectionExpression: $request.body.action
+
+functions:
+  # manage connection and disconnection of clients
+  connectionManager:
+    handler: handler.connection_manager
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+    events:
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+
+  # default error message
+  defaultMessages:
+    handler: handler.default_message
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+    events:
+      - websocket:
+          route: $default
+
+  # the main RunView handler
+  RunView:
+    handler: handler.run_view
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+    events:
+      - websocket:
+          route: run_view
+
+
+  FetchResults:
+    handler: handler.fetch_results
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+    events:
+      - websocket:
+          route: fetch_results
+
+  # ping
+  Ping:
+    handler: handler.ping
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+    events:
+      - websocket:
+          route: ping
+
+  # functions below are part of the state machine
+  StartRun:
+    handler: state_machine.start_run
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+
+  GetExecutionStatus:
+    handler: state_machine.get_execution_status
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+
+  PostBackResults:
+    handler: state_machine.post_back_results
+    timeout: 300
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+
+#-----OTHER RESOURCES--------
+resources:
+  Resources:
+    StatesExecutionRoleLayers:
+        Type: "AWS::IAM::Role"
+        Properties:
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Principal:
+                  Service:
+                    - !Sub states.${opt:region, 'us-east-1'}.amazonaws.com
+                Action: "sts:AssumeRole"
+          Path: "/"
+          Policies:
+            - PolicyName: StatesExecutionPolicy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "lambda:InvokeFunction"
+                    Resource: "*"
+
+    StateMachine:
+      Type: "AWS::StepFunctions::StateMachine"
+      Properties:
+        StateMachineName: "StateMachine-${self:service}"
+        DefinitionString:
+          |-
+              {
+                "Comment": "Runs a Snowflake view and waits for the execution to complete",
+                "StartAt": "RUN_VIEW",
+                "States": {
+                  "RUN_VIEW": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-StartRun",
+                    "ResultPath": "$.query_id",
+                    "Next": "CHECK_STATUS"
+                  },
+                  "CHECK_STATUS": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-GetExecutionStatus",
+                    "ResultPath": "$.status",
+                    "Next": "EXECUTION_COMPLETE?"
+                  },
+                  "EXECUTION_COMPLETE?": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.status",
+                        "StringEquals": "FAILED_WITH_ERROR",
+                        "Next": "EXECUTION_FAILED"
+                      },
+                      {
+                        "Variable": "$.status",
+                        "StringEquals": "SUCCESS",
+                        "Next": "POST_BACK_RESULTS"
+                      }
+                    ],
+                    "Default": "WAIT_FOR_EXECUTION"
+                  },
+                  "WAIT_FOR_EXECUTION": {
+                    "Type": "Wait",
+                    "SecondsPath": "$.wait_time",
+                    "Next": "CHECK_STATUS"
+                  },
+                  "EXECUTION_FAILED": {
+                    "Type": "Fail",
+                    "Cause": "VIEW_EXECUTION_FAILED",
+                    "Error": "View execution failed"
+                  },
+                  "POST_BACK_RESULTS": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-PostBackResults",
+                    "ResultPath": "$.post_status",
+                    "Next": "SUCCESS"
+                  },
+                  "SUCCESS": {
+                    "Type": "Succeed"
+                  }
+                }
+              }
+
+        RoleArn: !GetAtt [ StatesExecutionRoleLayers, Arn ]
+
+outputs:
+    StateMachineArn:
+      Description: The ARN for the state machine
+      Value:
+        "Fn::GetAtt": [ StateMachineRunView, Arn ]
+      Export:
+        Name: ${self:service}:${opt:stage}:StateMachineArn
