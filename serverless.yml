@@ -1,7 +1,7 @@
 service:
   name: snowflake-api-test-2
 
-# The following is commented out because a lambda layer has already 
+# The following is commented out because a lambda layer has already
 # been uploaded to allow lab participants to deploy this API quickly
 # If you want to deploy this to your own AWS account, please uncomment and
 # follow the process of packaging all requirements
@@ -33,21 +33,21 @@ provider:
         - "arn:aws:execute-api:*:*:**/@connections/*"
     - Effect: Allow
       Action:
+        - "secretsmanager:GetSecretValue"
+      Resource:
+        - "arn:aws:secretsmanager:us-east-1:486416218566:secret:snowflake/key-EGFRMJ"
+    - Effect: Allow
+      Action:
         - "states:StartExecution"
       Resource:
         - "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
   environment:
     API_REGION: "${self:provider.region}"
-    ##################################################################################
-    ### Credentials should never be kept in code. Please use AWS Secrets Manager  ####
-    ### or some other similar service to keep these secure.                       ####
-    ##################################################################################
-    SNOWFLAKE_USER: "snowflake_api"
-    SNOWFLAKE_PASSWORD: "Snowfl*ke450"
-    ##################################################################################
+    SNOWFLAKE_USER: "api_test"
     SNOWFLAKE_ACCOUNT: "demo102"
     SNOWFLAKE_WAREHOUSE: "TEST_WH"
-    SNOWFLAKE_SCHEMA: "citibike.public"
+    SNOWFLAKE_DATABASE: "citibike"
+    SNOWFLAKE_SCHEMA: "public"
     SNOWFLAKE_STATE_MACHINE_ARN: "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
 
   # optional
@@ -82,6 +82,7 @@ functions:
   # the main RunView handler
   RunView:
     handler: handler.run_view
+    timeout: 300
     layers:
       - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
     events:
@@ -91,6 +92,7 @@ functions:
 
   FetchResults:
     handler: handler.fetch_results
+    timeout: 300
     layers:
       - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
     events:
@@ -114,11 +116,18 @@ functions:
 
   GetExecutionStatus:
     handler: state_machine.get_execution_status
+    timeout: 300
     layers:
       - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
 
   PostBackResults:
     handler: state_machine.post_back_results
+    timeout: 300
+    layers:
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+
+  PostBackErrorMessage:
+    handler: state_machine.post_back_error_message
     timeout: 300
     layers:
       - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
@@ -176,7 +185,7 @@ resources:
                       {
                         "Variable": "$.status",
                         "StringEquals": "FAILED_WITH_ERROR",
-                        "Next": "EXECUTION_FAILED"
+                        "Next": "POST_BACK_ERROR_MESSAGE"
                       },
                       {
                         "Variable": "$.status",
@@ -190,6 +199,12 @@ resources:
                     "Type": "Wait",
                     "SecondsPath": "$.wait_time",
                     "Next": "CHECK_STATUS"
+                  },
+                  "POST_BACK_ERROR_MESSAGE": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-PostBackErrorMessage",
+                    "ResultPath": "$.post_status",
+                    "Next": "EXECUTION_FAILED"
                   },
                   "EXECUTION_FAILED": {
                     "Type": "Fail",

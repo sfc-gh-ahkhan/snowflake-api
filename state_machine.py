@@ -4,28 +4,19 @@ import urllib.parse
 import requests
 from requests_aws4auth import AWS4Auth
 import os
-
-def _get_snowflake_cursor():
-    ctx = snowflake.connector.connect(
-        user=os.environ['SNOWFLAKE_USER'],
-        password=os.environ['SNOWFLAKE_PASSWORD'],
-        account=os.environ['SNOWFLAKE_ACCOUNT']
-        )
-    return ctx.cursor()
+from keypair_auth import get_snowflake_cursor
 
 def start_run (event, context):
-    # if 'body' in event:
-    #     body = json.loads(event['body'])
 
     if 'view_name' in event:
         snowflake_view = event['view_name']
         print("now running snowflake view: ", snowflake_view)
 
-        cs = _get_snowflake_cursor()
+        cs = get_snowflake_cursor()
         try:
             print("starting to execute query")
-            cs.execute("use warehouse " + os.environ['SNOWFLAKE_WAREHOUSE'] + ";")
-            cs.execute("use schema " + os.environ['SNOWFLAKE_SCHEMA'] + ";")
+            # cs.execute("use warehouse " + os.environ['SNOWFLAKE_WAREHOUSE'] + ";")
+            # cs.execute("use schema " + os.environ['SNOWFLAKE_SCHEMA'] + ";")
             cs.execute("SELECT * from " + snowflake_view, _no_results=True)
             query_id = cs.sfqid
             print("query id: ", query_id)
@@ -38,7 +29,7 @@ def start_run (event, context):
                 r = requests.post(url, auth=auth, data=data)
         finally:
             pass
-            #cs.close()
+            #cs.close() <-- purposely not closing the connection since we want this to be async
 
         return query_id
 
@@ -46,10 +37,8 @@ def start_run (event, context):
 def get_execution_status (event, context):
     if 'query_id' in event:
         query_id = event['query_id']
-        cs = _get_snowflake_cursor()
+        cs = get_snowflake_cursor()
         try:
-            cs.execute("use warehouse " + os.environ['SNOWFLAKE_WAREHOUSE'] + ";")
-            cs.execute("use schema " + os.environ['SNOWFLAKE_SCHEMA'] + ";")
             cs.execute("select execution_status from table(information_schema.query_history()) where query_id like '" + query_id + "';")
             status = cs.fetchone()[0]
             #print(one_row[0])
@@ -58,17 +47,30 @@ def get_execution_status (event, context):
 
         return status
 
+def post_back_error_message (event, context):
+    if 'query_id' in event:
+        query_id = event['query_id']
+        cs = get_snowflake_cursor()
+        try:
+            cs.execute("select error_message from table(information_schema.query_history()) where query_id like '" + query_id + "';")
+            error_message = cs.fetchone()[0]
+
+            if 'post_back_url' in event:
+                url = event['post_back_url']
+                print("now trying to post back to: ", url)
+                auth = AWS4Auth(os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'], 'us-east-1', 'execute-api', session_token = os.environ['AWS_SESSION_TOKEN'])
+                r = requests.post(url, auth=auth, data=error_message)
+        finally:
+            cs.close()
+
 def post_back_results (event, context):
     if 'query_id' in event:
         query_id = event['query_id']
 
-        cs = _get_snowflake_cursor()
+        cs = get_snowflake_cursor()
         try:
-            cs.execute("use warehouse " + os.environ['SNOWFLAKE_WAREHOUSE'] + ";")
-            cs.execute("use schema " + os.environ['SNOWFLAKE_SCHEMA'] + ";")
             cs.execute("select * from table(result_scan('" + query_id + "')) limit 100;")
             results = cs.fetchall()
-            print(results)
         finally:
             cs.close()
 
@@ -95,6 +97,3 @@ def post_back_results (event, context):
             auth = AWS4Auth(os.environ['AWS_ACCESS_KEY_ID'], os.environ['AWS_SECRET_ACCESS_KEY'], 'us-east-1', 'execute-api', session_token = os.environ['AWS_SESSION_TOKEN'])
             r = requests.post(url, auth=auth, json=json_root)
             print(r.status_code)
-
-
-        return results

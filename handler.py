@@ -9,6 +9,7 @@ import time
 from requests_aws4auth import AWS4Auth
 import requests
 import os
+from keypair_auth import get_snowflake_cursor
 
 def _get_response(status_code, body):
     if not isinstance(body, str):
@@ -111,12 +112,8 @@ def fetch_results(event, context):
                 offset = body['offset']
             else:
                 offset = "0"
-            ctx = snowflake.connector.connect(
-                    user=os.environ['SNOWFLAKE_USER'],
-                    password=os.environ['SNOWFLAKE_PASSWORD'],
-                    account=os.environ['SNOWFLAKE_ACCOUNT']
-                    )
-            cs = ctx.cursor()
+
+            cs = get_snowflake_cursor()
             try:
                 cs.execute("use warehouse " + os.environ['SNOWFLAKE_WAREHOUSE'] + ";")
                 cs.execute("use schema " + os.environ['SNOWFLAKE_SCHEMA'] + ";")
