@@ -58,14 +58,6 @@ def default_message(event, context):
     logger.info("Unrecognized WebSocket action received.")
     return _get_response(400, "Unrecognized WebSocket action.")
 
-
-def ping(event, context):
-    """
-    Sanity check endpoint that echoes back 'PONG' to the sender.
-    """
-    logger.info("Ping requested.")
-    return _get_response(200, "PONG!")
-
 def run_view(event, context):
     #print("event: ", json.dumps(event))
     postbackURL = _get_postback_url(event)

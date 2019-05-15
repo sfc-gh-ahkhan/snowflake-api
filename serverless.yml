@@ -99,15 +99,6 @@ functions:
       - websocket:
           route: fetch_results
 
-  # ping
-  Ping:
-    handler: handler.ping
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
-    events:
-      - websocket:
-          route: ping
-
   # functions below are part of the state machine
   StartRun:
     handler: state_machine.start_run
