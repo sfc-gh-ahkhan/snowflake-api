@@ -45,7 +45,7 @@ provider:
     API_REGION: "${self:provider.region}"
     SNOWFLAKE_USER: "api_test"
     SNOWFLAKE_ACCOUNT: "demo102"
-    SNOWFLAKE_WAREHOUSE: "TEST_WH"
+    SNOWFLAKE_WAREHOUSE: "LAB_WH"
     SNOWFLAKE_DATABASE: "citibike"
     SNOWFLAKE_SCHEMA: "public"
     SNOWFLAKE_STATE_MACHINE_ARN: "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
