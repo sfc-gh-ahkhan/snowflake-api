@@ -1,5 +1,6 @@
+# give the service a unique name 
 service:
-  name: snowflake-api-test-2
+  name: snowflake-api-test-3
 
 # The following is commented out because a lambda layer has already
 # been uploaded to allow lab participants to deploy this API quickly
@@ -43,7 +44,7 @@ provider:
         - "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
   environment:
     API_REGION: "${self:provider.region}"
-    SNOWFLAKE_USER: "api_test"
+    SNOWFLAKE_USER: "snowflake_api_user"
     SNOWFLAKE_ACCOUNT: "demo102"
     SNOWFLAKE_WAREHOUSE: "LAB_WH"
     SNOWFLAKE_DATABASE: "citibike"
