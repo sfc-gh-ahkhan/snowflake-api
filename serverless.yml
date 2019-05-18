@@ -1,6 +1,6 @@
-# give the service a unique name 
+# give the service a unique name
 service:
-  name: snowflake-api-test-3
+  name: snowflake-api-test-49
 
 # The following is commented out because a lambda layer has already
 # been uploaded to allow lab participants to deploy this API quickly
@@ -17,7 +17,7 @@ service:
 # -------------------------------------------------------------------------
 
 custom:
-  aws_account: 486416218566
+  aws_account: 179725674134
 
 provider:
   name: aws
@@ -25,7 +25,7 @@ provider:
   stackName: ${self:service}-${self:provider.stage}
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
-  profile: personal
+  profile: hol_api_user_49
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -36,7 +36,7 @@ provider:
       Action:
         - "secretsmanager:GetSecretValue"
       Resource:
-        - "arn:aws:secretsmanager:us-east-1:486416218566:secret:snowflake/key-EGFRMJ"
+        - "arn:aws:secretsmanager:${opt:region, 'us-east-1'}:${self:custom.aws_account}:secret:snowflake/key-kjApAI"
     - Effect: Allow
       Action:
         - "states:StartExecution"
@@ -45,8 +45,8 @@ provider:
   environment:
     API_REGION: "${self:provider.region}"
     SNOWFLAKE_USER: "snowflake_api_user"
-    SNOWFLAKE_ACCOUNT: "demo102"
-    SNOWFLAKE_WAREHOUSE: "LAB_WH"
+    SNOWFLAKE_ACCOUNT: "hol2"
+    SNOWFLAKE_WAREHOUSE: "SH_API_LAB_WH"
     SNOWFLAKE_DATABASE: "citibike"
     SNOWFLAKE_SCHEMA: "public"
     SNOWFLAKE_STATE_MACHINE_ARN: "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
@@ -64,7 +64,7 @@ functions:
   connectionManager:
     handler: handler.connection_manager
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: $connect
@@ -75,7 +75,7 @@ functions:
   defaultMessages:
     handler: handler.default_message
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: $default
@@ -85,7 +85,7 @@ functions:
     handler: handler.run_view
     timeout: 300
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: run_view
@@ -95,7 +95,7 @@ functions:
     handler: handler.fetch_results
     timeout: 300
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: fetch_results
@@ -104,25 +104,25 @@ functions:
   StartRun:
     handler: state_machine.start_run
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
   GetExecutionStatus:
     handler: state_machine.get_execution_status
     timeout: 300
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
   PostBackResults:
     handler: state_machine.post_back_results
     timeout: 300
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
   PostBackErrorMessage:
     handler: state_machine.post_back_error_message
     timeout: 300
     layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:2
+      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
 #-----OTHER RESOURCES--------
 resources:
