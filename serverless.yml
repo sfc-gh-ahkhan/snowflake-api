@@ -1,6 +1,7 @@
-# give the service a unique name
+# give the service a unique name that starts with "snowflake-api"
+# for example: "snowflake-api-ark999"
 service:
-  name: snowflake-api-test-49
+  name: snowflake-api-<unique-name>
 
 # The following is commented out because a lambda layer has already
 # been uploaded to allow lab participants to deploy this API quickly

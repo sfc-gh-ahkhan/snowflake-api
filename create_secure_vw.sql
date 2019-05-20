@@ -42,11 +42,5 @@ select * from <unique_view_name> where date_part('year', observation_time)=2018 
 
 -- our API is configured to use the user 'snowflake_api' whose default role is also named 'snowflake-api'
 -- now lets make sure that the 'snowflake-api' role has access to this newly created secure view
-grant usage on database citibike to role snowflake_api;
-grant usage on schema citibike.public to role snowflake_api;
-grant select on view citibike.public.<unique_view_name> to role snowflake_api;
-
-
---Finally, check to see if snowflake_api role can access the <unique_view_name>
 use role snowflake_api;
 select * from <unique_view_name> where date_part('year', observation_time)=2018 limit 20;
