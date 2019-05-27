@@ -1,4 +1,4 @@
-use warehouse LAB_WH;
+use warehouse <YOUR_WH>;
 use schema citibike.public;
 --lets take a quick look at the trips and weather tables
 --the trips table contains trip info from the Citibike NYC bike sharing program
