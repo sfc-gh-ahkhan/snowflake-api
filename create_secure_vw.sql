@@ -39,8 +39,3 @@ from trips
 
 --test the secure view
 select * from <unique_view_name> where date_part('year', observation_time)=2018 limit 20;
-
--- our API is configured to use the user 'snowflake_api' whose default role is also named 'snowflake-api'
--- now lets make sure that the 'snowflake-api' role has access to this newly created secure view
-use role snowflake_api;
-select * from <unique_view_name> where date_part('year', observation_time)=2018 limit 20;
