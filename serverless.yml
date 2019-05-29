@@ -1,7 +1,8 @@
-# give the service a unique name that starts with "snowflake-api"
-# for example: "snowflake-api-ark999"
+# change the service name by appending you AWS credential
+# user number to ‘snowflake-api-’
+# for example: "snowflake-api-user-10"
 service:
-  name: snowflake-api-<unique-name>
+  name: snowflake-api-user-<your-aws-user-number>
 
 # The following is commented out because a lambda layer has already
 # been uploaded to allow lab participants to deploy this API quickly
@@ -26,7 +27,7 @@ provider:
   stackName: ${self:service}-${self:provider.stage}
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
-  profile: hol_api_user_49
+  profile: <your_profile_name> # e.g. user-11
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -217,11 +218,3 @@ resources:
               }
 
         RoleArn: !GetAtt [ StatesExecutionRoleLayers, Arn ]
-
-outputs:
-    StateMachineArn:
-      Description: The ARN for the state machine
-      Value:
-        "Fn::GetAtt": [ StateMachineRunView, Arn ]
-      Export:
-        Name: ${self:service}:${opt:stage}:StateMachineArn
