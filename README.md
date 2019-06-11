@@ -155,23 +155,27 @@ pip install -r requirements.txt
 
 Hit `Next`, give the secret a name and description. Hit `Next` again twice and then hit `Store`. Note the name you gave to the secret.
 
-4. Switch into the 'snowflake-api' directory and open 'serverless.yml'
-    using your favorite text editor. At the top of this file contains the 'service' -> 'name'
+4. From within the `snowflake-api` directory, open `keypair_auth.py` and update the following line with the passphrase that you used when you created the key pair in Snowflake Setup step \#1:
+```
+    passkey = "<your_passphrase>"
+```
+
+5. Open `serverless.yml`. At the top of this file contains the 'service' -> 'name'
     configuration. Go ahead and change the service name to whatever you want to name this project.
 
-5. Change AWS account number in serverless.yml
+6. Change AWS account number in serverless.yml
 
 ![](images/aws_account.png)
 
-6. If using the default AWS CLI profile, remove the `profile` attribute in `serverless.yml`. If using a named profile, change it to match the AWS CLI profile you want to use to deploy:
+7. If using the default AWS CLI profile, remove the `profile` attribute in `serverless.yml`. If using a named profile, change it to match the AWS CLI profile you want to use to deploy:
 
 ![](images/profile.png)
 
-7. In serverless.yml, update the ARN name of the secret that holds the private key you previously created:
+8. In serverless.yml, update the ARN name of the secret that holds the private key you previously created:
 
 ![](images/key_arn.png)
 
-8. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
+9. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
     folder and deploy the serverless stack:
 ```
 serverless deploy
@@ -181,7 +185,7 @@ AWS Lambda functions and deploys them. It also creates the AWS API
 Gateway endpoint with websockets and the AWS Step Functions state
 machine that orchestrates the Lambda functions.
 
-9. Go ahead and make note of the API endpoint that you just created.
+10. Go ahead and make note of the API endpoint that you just created.
 ![](images/deployed.png)
 
 Before we test our API, we need to first make sure that this API
