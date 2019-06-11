@@ -23,8 +23,8 @@ various AWS services including Lambda, API Gateway and Step Functions.
 1.  Typical REST endpoints timeout after a few minutes. So, we've
     implemented this analytics API on websockets which lends itself
     better for long running analytical queries. The client initiates a
-    connection and sends a message: {"action": "run\_view",
-    "view\_name": "trip\_weather\_vw"}
+    connection and sends a message: `{"action": "run_view",
+    "view_name": "trip_weather_vw"}`
 
 2.  The request is routed to a Lambda function which, in turn, triggers
     an AWS Step Functions workflow.
@@ -41,7 +41,7 @@ Setup & Configuration
 
 1.  Install the latest NodeJS: <https://nodejs.org/en/download/>. You can check to see if you have NodeJS installed by:
   ```
-  node ---version
+  node --version
   ```
 
 2.  This lab uses the **Serverless** framework
@@ -51,24 +51,24 @@ Setup & Configuration
   ```
 If installed successfully, you should be able to now check the installed version:
 ```
-serverless ---version
+serverless --version
 ```
 
 3.  The API is implemented using Python 3. Check to see if you Python 3
     installed on your machine:
 ```
-python ---version
+python --version
 ```
 OR
 ```
-python3 ---version
+python3 --version
 ```
 If not installed, download and install Python 3:
 <https://www.python.org/downloads/>
 
 4. If you don't already, install the AWS CLI using pip3:
 ```
-sudo pip3 install awscli ---upgrade ---user**
+sudo pip3 install awscli --upgrade --user
 ```
 You can use `aws --version` command to verify if the AWS CLI was
 correctly installed. If it wasn't, see this to troubleshoot:
@@ -92,7 +92,7 @@ Snowflake Setup
 ===============
 
 Before we get into building the API, lets setup our backend Snowflake environment correctly
-so have all the parameters ready when it comes time to edit the API code.
+so we have all the parameters ready when it comes time to edit the API code.
 
 1. Create and save the RSA public and private keys using the procedure described here:
 https://docs.snowflake.net/manuals/user-guide/snowsql-start.html#using-key-pair-authentication
@@ -104,7 +104,7 @@ Jot down the passphrase you used to encrypt the private key.
 ```sql
 use role accountadmin;
 create role if not exists snowflake_api_role;
-grant usage on database citibike_api to role snowflake_api_role;
+grant usage on database CITIBIKE_API to role snowflake_api_role;
 grant usage on schema CITIBIKE_API.PUBLIC to role snowflake_api_role;
 grant select on all views in schema CITIBIKE_API.PUBLIC to role snowflake_api_role;
 grant select on future views in schema CITIBIKE_API.PUBLIC to role snowflake_api_role;
@@ -134,15 +134,12 @@ select * from <your_view_name> limit 10;
 Clone, Modify and Deploy Code
 ========================================
 
-The API code is implemented using the Serverless framework / Python
-3.7 and is available on GitHub.
-
-7. Clone this repo:
+1. Clone this repo:
 ```
   git clone https://github.com/filanthropic/snowflake-api.git
 ```
 
-8. Before the Serverless framework can deploy this code, it needs the `serverless-python-requirements` plugin so lets install that (dependency is declared in package.json)
+2. Before the Serverless framework can deploy this code, it needs the `serverless-python-requirements` plugin so lets install that (dependency is declared in package.json)
 ```
 cd snowflake-api/
 npm install
@@ -152,28 +149,29 @@ snowflake-api ahkhan$ python3 -m venv .
 source bin/activate
 pip install -r requirements.txt
 
-8. Open the AWS Secrets Manager and create a new secret that will hold the private key. Select 'Other type of secret' and then select `plaintext` and use `p_key` as the key and your private key that you generated in the Snowflake setup step 1 as the value.
+3. Open the AWS Secrets Manager and create a new secret that will hold the private key. Select 'Other type of secret' and then select `plaintext` and use `p_key` as the key and your private key that you generated in the Snowflake setup step 1 as the value.
 
   ![](images/private_key.png)
 
-Note the ARN of the secret.
+Hit `Next`, give the secret a name and description. Hit `Next` again twice and then hit `Store`. Note the name you gave to the secret.
 
-8. Switch into the 'snowflake-api' directory and open 'serverless.yml'
-    using your favorite text editor. At the top of this file contains the 'service' -\> 'name'
+4. Switch into the 'snowflake-api' directory and open 'serverless.yml'
+    using your favorite text editor. At the top of this file contains the 'service' -> 'name'
     configuration. Go ahead and change the service name to whatever you want to name this project.
 
-9. Change AWS account number in serverless.yml
+5. Change AWS account number in serverless.yml
 
+![](images/aws_account.png)
 
-9. If using the default AWS CLI profile, remove the `profile` attribute in 'serverless.yml'. If using a named profile, find the 'profile' attribute under the 'provider' section and change it to match the AWS CLI profile you want to use to deploy:
+6. If using the default AWS CLI profile, remove the `profile` attribute in `serverless.yml`. If using a named profile, change it to match the AWS CLI profile you want to use to deploy:
 
-    ![](images/profile.png)
+![](images/profile.png)
 
-10. In serverless.yml, update the ARN name of the secret that holds the private key you previously created:
+7. In serverless.yml, update the ARN name of the secret that holds the private key you previously created:
 
 ![](images/key_arn.png)
 
-13. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
+8. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
     folder and deploy the serverless stack:
 ```
 serverless deploy
@@ -183,7 +181,7 @@ AWS Lambda functions and deploys them. It also creates the AWS API
 Gateway endpoint with websockets and the AWS Step Functions state
 machine that orchestrates the Lambda functions.
 
-14. Go ahead and make note of the API endpoint that you just created.
+9. Go ahead and make note of the API endpoint that you just created.
 ![](images/deployed.png)
 
 Before we test our API, we need to first make sure that this API
@@ -195,24 +193,24 @@ Module 4: Using the API
 
 The API is based on websockets because of the long running nature of analytics queries. The best way to understand how the client interacts with the API is to first install the "wscat" tool.
 
-15. Install the "wscat"
+1. Install the "wscat"
 ```
 sudo npm install -g wscat
 ```
 
-16. Connect to the API endpoint you created in step \#13:
+2. Connect to the API endpoint you created in step \#13:
 ```
-wscat -c wss://\<your\_api\_endpoint\>
+wscat -c wss://<your_api_endpoint>
 ```
 
-17. In the API code, we have implemented two websocket "routes" or types
+3. In the API code, we have implemented two websocket "routes" or types
     of actions that the API supports. First one is used to run a
-    particular view and is called "**run\_view**" and the other one
-    called "**fetch\_results**" is used to fetch cached results of an
+    particular view and is called "**run_view**" and the other one
+    called "**fetch_results**" is used to fetch cached results of an
     already run query and helps the client paginate through the results
     in an efficient manner.
 
-18. Once connected, you can run the secure view you created previously
+4. Once connected, you can run the secure view you created previously
     by running:
 ```
  {"action": "run_view", "view_name":"<your_view_name\>"}
@@ -224,14 +222,14 @@ The response should look something like this:
 
 ![](images/response.png)
 
-19. The response of the previous command should give you a "query\_id"
+5. The response of the previous command should give you a `query_id`
     which you can use to paginate through the results:
 ```
 {"action": "fetch_results","query_id": "<query_id>", "offset": "100"}
 ```
 
-20. Open up the 'client.html' file in a browser to see how a simple HTML
-    client can interact with our Snowflake API.\
+6. Open up the 'client.html' file in a browser to see how a simple HTML
+    client can interact with our Snowflake API.
 
 ![](images/client.png)
 
