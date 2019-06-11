@@ -1,0 +1,24 @@
+{
+  "requires": true,
+  "lockfileVersion": 1,
+  "dependencies": {
+    "serverless-python-requirements": "^4.3.0"
+  },
+  "name": "snowflake-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/filanthropic/snowflake-api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/filanthropic/snowflake-api/issues"
+  },
+  "homepage": "https://github.com/filanthropic/snowflake-api#readme",
+  "description": ""
+}

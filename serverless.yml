@@ -2,24 +2,15 @@
 # user number to ‘snowflake-api-’
 # for example: "snowflake-api-user-10"
 service:
-  name: snowflake-api-user-<your-aws-user-number>
+  name: snowflake-api-user-59
 
-# The following is commented out because a lambda layer has already
-# been uploaded to allow lab participants to deploy this API quickly
-# If you want to deploy this to your own AWS account, please uncomment and
-# follow the process of packaging all requirements
-# here: https://serverless.com/blog/serverless-python-packaging/
-# -------------------------------------------------------------------------
-#plugins:
-#  - serverless-python-requirements
-
-#custom:
-#  pythonRequirements:
-#    dockerizePip: non-linux
-# -------------------------------------------------------------------------
+plugins:
+ - serverless-python-requirements
 
 custom:
-  aws_account: 179725674134
+  aws_account: 486416218566
+  pythonRequirements:
+    dockerizePip: non-linux
 
 provider:
   name: aws
@@ -27,7 +18,7 @@ provider:
   stackName: ${self:service}-${self:provider.stage}
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
-  profile: <your_profile_name> # e.g. user-11
+  profile: personal
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -38,7 +29,7 @@ provider:
       Action:
         - "secretsmanager:GetSecretValue"
       Resource:
-        - "arn:aws:secretsmanager:${opt:region, 'us-east-1'}:${self:custom.aws_account}:secret:snowflake/key-kjApAI"
+        - "arn:aws:secretsmanager:${opt:region, 'us-east-1'}:${self:custom.aws_account}:secret:snowflake/key-EGFRMJ"
     - Effect: Allow
       Action:
         - "states:StartExecution"
@@ -47,9 +38,9 @@ provider:
   environment:
     API_REGION: "${self:provider.region}"
     SNOWFLAKE_USER: "snowflake_api_user"
-    SNOWFLAKE_ACCOUNT: "hol2"
-    SNOWFLAKE_WAREHOUSE: "SH_API_LAB_WH"
-    SNOWFLAKE_DATABASE: "citibike"
+    SNOWFLAKE_ACCOUNT: "demo102"
+    SNOWFLAKE_WAREHOUSE: "TEST_WH"
+    SNOWFLAKE_DATABASE: "citibike_api"
     SNOWFLAKE_SCHEMA: "public"
     SNOWFLAKE_STATE_MACHINE_ARN: "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
 
@@ -65,8 +56,8 @@ functions:
   # manage connection and disconnection of clients
   connectionManager:
     handler: handler.connection_manager
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: $connect
@@ -76,8 +67,8 @@ functions:
   # default error message
   defaultMessages:
     handler: handler.default_message
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: $default
@@ -86,8 +77,8 @@ functions:
   RunView:
     handler: handler.run_view
     timeout: 300
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: run_view
@@ -96,8 +87,8 @@ functions:
   FetchResults:
     handler: handler.fetch_results
     timeout: 300
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
     events:
       - websocket:
           route: fetch_results
@@ -105,26 +96,26 @@ functions:
   # functions below are part of the state machine
   StartRun:
     handler: state_machine.start_run
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
   GetExecutionStatus:
     handler: state_machine.get_execution_status
     timeout: 300
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
   PostBackResults:
     handler: state_machine.post_back_results
     timeout: 300
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
   PostBackErrorMessage:
     handler: state_machine.post_back_error_message
     timeout: 300
-    layers:
-      - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
+    # layers:
+    #   - arn:aws:lambda:us-east-1:${self:custom.aws_account}:layer:snowflake-layer:1
 
 #-----OTHER RESOURCES--------
 resources:

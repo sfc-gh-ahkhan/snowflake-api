@@ -1,6 +1,7 @@
 # Distribution / packaging
 .DS_Store
 .Python
+node_modules/
 env/
 build/
 develop-eggs/

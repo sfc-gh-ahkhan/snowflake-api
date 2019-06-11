@@ -107,8 +107,8 @@ def fetch_results(event, context):
 
             cs = get_snowflake_cursor()
             try:
-                cs.execute("use warehouse " + os.environ['SNOWFLAKE_WAREHOUSE'] + ";")
-                cs.execute("use schema " + os.environ['SNOWFLAKE_SCHEMA'] + ";")
+                #cs.execute("use warehouse " + os.environ['SNOWFLAKE_WAREHOUSE'] + ";")
+                #cs.execute("use schema " + os.environ['SNOWFLAKE_SCHEMA'] + ";")
                 cs.execute("select * from table(result_scan('" + query_id + "')) limit 100 offset " + offset + ";")
                 #print(','.join([col[0] for col in cs.description]))
                 columns = []
