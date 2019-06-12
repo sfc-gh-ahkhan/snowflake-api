@@ -1,7 +1,7 @@
 Snowflake API for Analytics Applications
 ========================================
 
-This is an example of how to build a serverless API that leverages Snowflake's elastic data warehouse as DB engine for analytics applications. This API also leverages advanced Snowflake features like Multi-cluster Warehouses and multiple caching layers to build a truly scalable and performant analytics API at a fraction of the cost of legacy systems.
+This is an example of how to build a serverless API that leverages Snowflake's elastic data warehouse as DB engine for analytics applications. This example implements a read-only API that can run and paginate through the results of any view defined within a Snowflake database to which it has access to. It also leverages advanced Snowflake features like Multi-cluster Warehouses and multiple caching layers to build a truly scalable and performant analytics API at a fraction of the cost of legacy systems.
 
 Requirements
 ============
@@ -184,8 +184,8 @@ machine that orchestrates the Lambda functions.
 12. Go ahead and make note of the API endpoint that you just created.
 ![](images/deployed.png)
 
-Module 4: Using the API
-========================
+Using the API
+=============
 
 The API is based on websockets because of the long running nature of analytics queries. The best way to understand how the client interacts with the API is to first install the "wscat" tool.
 
