@@ -1,8 +1,7 @@
-Overview
-========
+Snowflake API for Analytics Applications
+========================================
 
-This is an example of how to build a serverless API that leverages Snowflake's elastic data warehouse as DB engine for analytics applications. This API also leverages advanced Snowflake features like Multi-cluster Warehouses and multiple caching layers to build a truly scalable and performant analytics API at a fraction of the cost of
-legacy systems.
+This is an example of how to build a serverless API that leverages Snowflake's elastic data warehouse as DB engine for analytics applications. This API also leverages advanced Snowflake features like Multi-cluster Warehouses and multiple caching layers to build a truly scalable and performant analytics API at a fraction of the cost of legacy systems.
 
 Requirements
 ============
