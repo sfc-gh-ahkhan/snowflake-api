@@ -61,7 +61,7 @@ def _get_secret():
 
 def get_snowflake_cursor():
     secret_key = _get_secret()
-    passkey = "Snowfl*ke"
+    passkey = "<your_passphrase>"
 
     p_key= serialization.load_pem_private_key(secret_key.encode(),password=passkey.encode(),backend=default_backend())
 
