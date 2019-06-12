@@ -104,25 +104,16 @@ Jot down the passphrase you used to encrypt the private key.
 ```sql
 use role accountadmin;
 create role if not exists snowflake_api_role;
-grant usage on database CITIBIKE_API to role snowflake_api_role;
-grant usage on schema CITIBIKE_API.PUBLIC to role snowflake_api_role;
-grant select on all views in schema CITIBIKE_API.PUBLIC to role snowflake_api_role;
-grant select on future views in schema CITIBIKE_API.PUBLIC to role snowflake_api_role;
-grant usage on warehouse TEST_WH to role snowflake_api_role;
+grant usage on database <YOUR_DB_NAME> to role snowflake_api_role;
+grant usage on schema <YOUR_DB_NAME>.<YOUR_SCHEMA_NAME> to role snowflake_api_role;
+grant select on all views in schema <YOUR_DB_NAME>.<YOUR_SCHEMA_NAME> to role snowflake_api_role;
+grant select on future views in schema <YOUR_DB_NAME>.<YOUR_SCHEMA_NAME> to role snowflake_api_role;
+grant usage on warehouse <YOUR_WAREHOUSE_NAME> to role snowflake_api_role;
 
 create user snowflake_api_user password='Snowfl*ke' default_role = snowflake_api_role must_change_password = false;
-alter user snowflake_api_user set rsa_public_key='your_rsa_public_key'; --exclude the header and footer
+alter user snowflake_api_user set rsa_public_key='<YOUR_RSA_PUBLIC_KEY>'; --exclude the header and footer
 grant role snowflake_api_role to user snowflake_api_user;
 ```
-
-Substitutions you will need to make in the SQL above:
-
-- Replace `CITIBIKE_API` with your database name.
-- Replace `PUBLIC` with your schema name.
-- Replace `TEST_WH` with the name of the warehouse you want the API to use.
-- Use a different password for `snowflake_api_user`
-- Use the public key you generated previously without the header and footer to set the `rsa_public_key` parameter for the `snowflake_api_user`.
-
 
 3. Create a test view with some test data, switch to using the new `snowflake_api_role` and try a simple select to see if the permissions work:
 
@@ -144,10 +135,6 @@ Clone, Modify and Deploy Code
 cd snowflake-api/
 npm install
 ```
-
-snowflake-api ahkhan$ python3 -m venv .
-source bin/activate
-pip install -r requirements.txt
 
 3. Open the AWS Secrets Manager and create a new secret that will hold the private key. Select 'Other type of secret' and then select `plaintext` and use `p_key` as the key and your private key that you generated in the Snowflake setup step 1 as the value.
 
@@ -175,7 +162,11 @@ Hit `Next`, give the secret a name and description. Hit `Next` again twice and t
 
 ![](images/key_arn.png)
 
-9. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
+9. Update the rest of the environment variables to match your Snowflake account, warehouse name, database and schema name within `serverless.yml`.
+
+![](images/environment.png)
+
+10. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
     folder and deploy the serverless stack:
 ```
 serverless deploy
@@ -185,12 +176,8 @@ AWS Lambda functions and deploys them. It also creates the AWS API
 Gateway endpoint with websockets and the AWS Step Functions state
 machine that orchestrates the Lambda functions.
 
-10. Go ahead and make note of the API endpoint that you just created.
+11. Go ahead and make note of the API endpoint that you just created.
 ![](images/deployed.png)
-
-Before we test our API, we need to first make sure that this API
-endpoint has access to the right data in our Snowflake backend.
-
 
 Module 4: Using the API
 ========================
