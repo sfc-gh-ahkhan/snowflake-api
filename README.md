@@ -113,6 +113,7 @@ grant usage on warehouse <YOUR_WAREHOUSE_NAME> to role snowflake_api_role;
 create user snowflake_api_user password='Snowfl*ke' default_role = snowflake_api_role must_change_password = false;
 alter user snowflake_api_user set rsa_public_key='<YOUR_RSA_PUBLIC_KEY>'; --exclude the header and footer
 grant role snowflake_api_role to user snowflake_api_user;
+grant role snowflake_api_role to user <CURRENT_LOGGED_IN_USER>;
 ```
 
 3. Create a test view with some test data, switch to using the new `snowflake_api_role` and try a simple select to see if the permissions work:
@@ -147,26 +148,31 @@ Hit `Next`, give the secret a name and description. Hit `Next` again twice and t
     passkey = "<your_passphrase>"
 ```
 
-5. Open `serverless.yml`. At the top of this file contains the 'service' -> 'name'
+5. Also within `keypair_auth.py`, update the follow variable with the name (not the ARN) of the secret you just created within AWS Secrets Manager:
+```
+secret_name = "<SECRET_NAME>"
+```
+
+6. Open `serverless.yml`. At the top of this file contains the 'service' -> 'name'
     configuration. Go ahead and change the service name to whatever you want to name this project.
 
-6. Change AWS account number in serverless.yml
+7. Change AWS account number in serverless.yml
 
 ![](images/aws_account.png)
 
-7. If using the default AWS CLI profile, remove the `profile` attribute in `serverless.yml`. If using a named profile, change it to match the AWS CLI profile you want to use to deploy:
+8. If using the default AWS CLI profile, remove the `profile` attribute in `serverless.yml`. If using a named profile, change it to match the AWS CLI profile you want to use to deploy:
 
 ![](images/profile.png)
 
-8. In serverless.yml, update the ARN name of the secret that holds the private key you previously created:
+9. In serverless.yml, update the last part of the ARN (not the name) of the secret that holds the private key you previously created:
 
 ![](images/key_arn.png)
 
-9. Update the rest of the environment variables to match your Snowflake account, warehouse name, database and schema name within `serverless.yml`.
+10. Update the rest of the environment variables to match your Snowflake account, warehouse name, database and schema name within `serverless.yml`.
 
 ![](images/environment.png)
 
-10. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
+11. Now we are ready to deploy the API to AWS. Go to the 'snowflake-api'
     folder and deploy the serverless stack:
 ```
 serverless deploy
@@ -176,7 +182,7 @@ AWS Lambda functions and deploys them. It also creates the AWS API
 Gateway endpoint with websockets and the AWS Step Functions state
 machine that orchestrates the Lambda functions.
 
-11. Go ahead and make note of the API endpoint that you just created.
+12. Go ahead and make note of the API endpoint that you just created.
 ![](images/deployed.png)
 
 Module 4: Using the API
@@ -204,7 +210,7 @@ wscat -c wss://<your_api_endpoint>
 4. Once connected, you can run the secure view you created previously
     by running:
 ```
- {"action": "run_view", "view_name":"<your_view_name\>"}
+ {"action": "run_view", "view_name":"<your_view_name>"}
 ```
 
   -------------------------------------------------------------------

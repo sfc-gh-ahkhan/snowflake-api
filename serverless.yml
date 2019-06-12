@@ -26,7 +26,7 @@ provider:
       Action:
         - "secretsmanager:GetSecretValue"
       Resource:
-        - "arn:aws:secretsmanager:${opt:region, 'us-east-1'}:${self:custom.aws_account}:secret:snowflake/key-EGFRMJ"
+        - "arn:aws:secretsmanager:${opt:region, 'us-east-1'}:${self:custom.aws_account}:secret:<SECRET_ARN_ENDING>"
     - Effect: Allow
       Action:
         - "states:StartExecution"
@@ -37,7 +37,7 @@ provider:
     SNOWFLAKE_USER: "snowflake_api_user"
     SNOWFLAKE_ACCOUNT: "<YOUR_SNOWFLAKE_ACOUNT>"
     SNOWFLAKE_WAREHOUSE: "<SNOWFLAKE_WAREHOUSE_NAME>"
-    SNOWFLAKE_DATABASE: "DATABASE_NAME>"
+    SNOWFLAKE_DATABASE: "<DATABASE_NAME>"
     SNOWFLAKE_SCHEMA: "<SCHEMA_NAME>"
     SNOWFLAKE_STATE_MACHINE_ARN: "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
 

@@ -13,14 +13,13 @@ from botocore.exceptions import ClientError
 
 def _get_secret():
 
-    secret_name = "snowflake/key"
-    region_name = "us-east-1"
+    secret_name = "<SECRET_NAME>"
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
     client = session.client(
         service_name='secretsmanager',
-        region_name=region_name
+        region_name=os.environ['API_REGION']
     )
 
     try:
