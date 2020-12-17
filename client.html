@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Snowflake API Client</title>
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="row">
+        <div class="col">
+        </div>
+        <div class="col-8">
+          &nbsp;
+        </div>
+        <div class="col">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+        </div>
+        <div class="col-8">
+          <h2>Snowflake WebSocket API - Sample Client</h2>
+        </div>
+        <div class="col">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+        </div>
+        <div class="col-8">
+            <div class="form-group">
+              <input type="text" class="form-control" id="inputURL" placeholder="Enter API URL">
+              <small id="urlHelp" class="form-text text-muted">e.g. wss://xxxyyzz.execute-api.us-east-1.amazonaws.com/dev</small>
+            </div>
+            <div class="form-group">
+              <input type="text" class="form-control" id="inputViewName" placeholder="View Name">
+            </div>
+            <button id="submitBtn" class="btn btn-primary">Run View</button>
+        </div>
+        <div class="col">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12">
+          &nbsp;
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+        </div>
+        <div class="col-8">
+          <div class="progress">
+            <div id="barProgress" class="progress-bar" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" style="width: 10%"></div>
+          </div>
+        </div>
+        <div class="col">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12">
+          &nbsp;
+        </div>
+      </div>
+
+
+
+      <div class="row">
+        <div class="col-2">
+        </div>
+        <div class="col-8">
+          <div class="form-group">
+            <label for="exampleFormControlTextarea1">Response</label>
+            <textarea class="form-control" id="textResponse" rows="10"></textarea>
+          </div>
+        </div>
+        <div class="col-2">
+        </div>
+      </div>
+
+      <div  class="row">
+        <div class="col-2">
+        </div>
+        <div class="col-2">
+          <small id="timer" class="form-text text-muted">
+            00:00.000
+          </small>
+        </div>
+        <div class="col-6">
+          <nav id="navPagination" aria-label="Page navigation example">
+            <ul class="pagination float-right">
+              <li id="btnPaginateStart" class="page-item"><a class="page-link" href="#">First</a></li>
+              <li id="btnPaginateNext100" class="page-item"><a class="page-link" href="#">Next</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <div class="col-2">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12">
+          &nbsp;
+        </div>
+      </div>
+
+
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+    <script src="datamaps.all.hires.min.js"></script>
+    <script>
+        var query_id, offset, int;
+        var apiSocket;
+
+        function startTimer(){
+          var start = new Date;
+
+          int = setInterval(function() {
+              //$('#timer').text((new Date - start) + " ms");
+              var time = new Date().getTime();
+              var dif = time-start;
+              ms= dif%1000;
+              s = Math.floor(dif/1000)%60;
+              m = Math.floor(dif/1000/60)%60;
+              $('#timer').text( m+':'+s+'.'+ms);
+          }, 1);
+        }
+
+        function stopTimer(){
+          clearInterval(int);
+        }
+
+        $( document ).ready(function() {
+            offset = 0;
+            $("#navPagination").hide();
+            $("#barProgress").hide();
+        });
+
+        $("#submitBtn").click(function(){
+          startTimer();
+          offset = 0;
+          console.log('url: ' + $('#inputURL').val())
+          apiSocket = new WebSocket($('#inputURL').val());
+
+          $("#barProgress").show();
+          $('#barProgress').css('width', '10%').attr('aria-valuenow', "10");
+
+          apiSocket.onopen = function (event) {
+            console.log('connected!');
+            var msg = {
+              action: "run_view",
+              view_name: $('#inputViewName').val(),
+            };
+            console.log('sending: ' + JSON.stringify(msg));
+            apiSocket.send(JSON.stringify(msg));
+            $('#barProgress').css('width', '20%').attr('aria-valuenow', "20");
+          };
+
+          apiSocket.onmessage = function (event) {
+            $("#textResponse").text = "";
+            $("#textResponse").val(event.data);
+            //simple check to see if we have recieved a valid response
+            if (event.data.length > 100) {
+              stopTimer();
+              $('#barProgress').css('width', '100%').attr('aria-valuenow', "100");
+              response = JSON.parse(event.data);
+              query_id = response.query_id;
+              console.log('query_id: ' + query_id);
+              $("#navPagination").show();
+            } else {
+              $('#barProgress').css('width', '40%').attr('aria-valuenow', "40");
+            }
+          }
+
+          apiSocket.onerror = function (err) {
+            console.log('error: ' + err);
+          }
+
+          $("#btnPaginateStart").click(function(){
+            $('#barProgress').css('width', '30%').attr('aria-valuenow', "30");
+            offset = 0;
+            var msg = {
+              action: "fetch_results",
+              query_id: query_id,
+              offset: offset.toString()
+            };
+
+            console.log('msg: ' + JSON.stringify(msg));
+            apiSocket.send(JSON.stringify(msg));
+            $("#textResponse").val('Sent: ' + JSON.stringify(msg));
+            startTimer();
+          });
+
+          $("#btnPaginateNext100").click(function(){
+            $('#barProgress').css('width', '30%').attr('aria-valuenow', "30");
+            offset = offset + 100;
+            var msg = {
+              action: "fetch_results",
+              query_id: query_id,
+              offset: offset.toString()
+            };
+
+            console.log('msg: ' + JSON.stringify(msg));
+            apiSocket.send(JSON.stringify(msg));
+            $("#textResponse").val('Sent: ' + JSON.stringify(msg));
+            startTimer();
+          });
+        });
+
+
+
+    </script>
+  </body>
+</html>

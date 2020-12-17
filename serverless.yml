@@ -1,0 +1,192 @@
+service:
+  name: snowflake-api-v1
+
+plugins:
+ - serverless-python-requirements
+
+custom:
+  aws_account: <YOUR_AWS_ACCOUNT_NUMBER>
+  pythonRequirements:
+    dockerizePip: non-linux
+
+provider:
+  name: aws
+  runtime: python3.7
+  stackName: ${self:service}-${self:provider.stage}
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  profile: <AWS_CLI_PROFILE> #remove if using the default profile for AWS CLI
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - "execute-api:ManageConnections"
+      Resource:
+        - "arn:aws:execute-api:*:*:**/@connections/*"
+    - Effect: Allow
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource:
+        - "arn:aws:secretsmanager:${opt:region, 'us-east-1'}:${self:custom.aws_account}:secret:<SECRET_ARN_ENDING>"
+    - Effect: Allow
+      Action:
+        - "states:StartExecution"
+      Resource:
+        - "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
+  environment:
+    API_REGION: "${self:provider.region}"
+    SNOWFLAKE_USER: "snowflake_api_user"
+    SNOWFLAKE_ACCOUNT: "<YOUR_SNOWFLAKE_ACOUNT>"
+    SNOWFLAKE_WAREHOUSE: "<SNOWFLAKE_WAREHOUSE_NAME>"
+    SNOWFLAKE_DATABASE: "<DATABASE_NAME>"
+    SNOWFLAKE_SCHEMA: "<SCHEMA_NAME>"
+    SNOWFLAKE_STATE_MACHINE_ARN: "arn:aws:states:${opt:region, 'us-east-1'}:${self:custom.aws_account}:stateMachine:StateMachine-${self:service}"
+
+  # optional
+  websocketApiName: snowflake-websocket-api-${self:provider.stage}
+
+  # required for websocket apis
+  # this selects from your payload what your "routeKey" parameter is
+  # from the websocket event types on your function
+  websocketApiRouteSelectionExpression: $request.body.action
+
+functions:
+  # manage connection and disconnection of clients
+  connectionManager:
+    handler: handler.connection_manager
+    events:
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+
+  # default error message
+  defaultMessages:
+    handler: handler.default_message
+    events:
+      - websocket:
+          route: $default
+
+  # the main RunView handler
+  RunView:
+    handler: handler.run_view
+    timeout: 300
+    events:
+      - websocket:
+          route: run_view
+
+
+  FetchResults:
+    handler: handler.fetch_results
+    timeout: 300
+    events:
+      - websocket:
+          route: fetch_results
+
+  # functions below are part of the state machine
+  StartRun:
+    handler: state_machine.start_run
+
+  GetExecutionStatus:
+    handler: state_machine.get_execution_status
+    timeout: 300
+
+  PostBackResults:
+    handler: state_machine.post_back_results
+    timeout: 300
+
+  PostBackErrorMessage:
+    handler: state_machine.post_back_error_message
+    timeout: 300
+
+#-----OTHER RESOURCES--------
+resources:
+  Resources:
+    StatesExecutionRoleLayers:
+        Type: "AWS::IAM::Role"
+        Properties:
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Principal:
+                  Service:
+                    - !Sub states.${opt:region, 'us-east-1'}.amazonaws.com
+                Action: "sts:AssumeRole"
+          Path: "/"
+          Policies:
+            - PolicyName: StatesExecutionPolicy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "lambda:InvokeFunction"
+                    Resource: "*"
+
+    StateMachine:
+      Type: "AWS::StepFunctions::StateMachine"
+      Properties:
+        StateMachineName: "StateMachine-${self:service}"
+        DefinitionString:
+          |-
+              {
+                "Comment": "Runs a Snowflake view and waits for the execution to complete",
+                "StartAt": "RUN_VIEW",
+                "States": {
+                  "RUN_VIEW": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-StartRun",
+                    "ResultPath": "$.query_id",
+                    "Next": "CHECK_STATUS"
+                  },
+                  "CHECK_STATUS": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-GetExecutionStatus",
+                    "ResultPath": "$.status",
+                    "Next": "EXECUTION_COMPLETE?"
+                  },
+                  "EXECUTION_COMPLETE?": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.status",
+                        "StringEquals": "FAILED_WITH_ERROR",
+                        "Next": "POST_BACK_ERROR_MESSAGE"
+                      },
+                      {
+                        "Variable": "$.status",
+                        "StringEquals": "SUCCESS",
+                        "Next": "POST_BACK_RESULTS"
+                      }
+                    ],
+                    "Default": "WAIT_FOR_EXECUTION"
+                  },
+                  "WAIT_FOR_EXECUTION": {
+                    "Type": "Wait",
+                    "SecondsPath": "$.wait_time",
+                    "Next": "CHECK_STATUS"
+                  },
+                  "POST_BACK_ERROR_MESSAGE": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-PostBackErrorMessage",
+                    "ResultPath": "$.post_status",
+                    "Next": "EXECUTION_FAILED"
+                  },
+                  "EXECUTION_FAILED": {
+                    "Type": "Fail",
+                    "Cause": "VIEW_EXECUTION_FAILED",
+                    "Error": "View execution failed"
+                  },
+                  "POST_BACK_RESULTS": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:lambda:${opt:region, 'us-east-1'}:${self:custom.aws_account}:function:${self:service}-${self:provider.stage}-PostBackResults",
+                    "ResultPath": "$.post_status",
+                    "Next": "SUCCESS"
+                  },
+                  "SUCCESS": {
+                    "Type": "Succeed"
+                  }
+                }
+              }
+
+        RoleArn: !GetAtt [ StatesExecutionRoleLayers, Arn ]
